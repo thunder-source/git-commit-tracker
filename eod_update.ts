@@ -11,7 +11,8 @@
 
 import "dotenv/config";
 import axios, { type AxiosInstance, type AxiosError } from "axios";
-
+import fs from "fs";
+import path from "path";
 /**
  * Represents a Git commit with essential information
  */
@@ -693,13 +694,15 @@ class EODUpdate {
 
         // Check if any commit is by a target user (checking both name and login if available)
         const matchesUsers =
-          targetUsers.length === 0 ||
-          (event.payload.commits &&
-            event.payload.commits.some((commit) => {
-              const authorName = commit.author.name;
-              return targetUsers.includes(authorName);
-            })) ||
-          (event.actor && targetUsers.includes(event.actor.login));
+          targetUsers.length === 0
+            ? true
+            : (event.payload.commits &&
+                event.payload.commits.some((commit) =>
+                  targetUsers.includes(commit.author.name)
+                )) ||
+              (event.actor && targetUsers.includes(event.actor.login));
+
+        if (!matchesUsers) return false;
 
         // If we have repos but no users, just check repos
         if (validRepos.length > 0 && targetUsers.length === 0) {
@@ -737,22 +740,22 @@ class EODUpdate {
 
           // Add commits to the repo
           if (event.payload.commits) {
-            const commits = event.payload.commits.map((commit) => ({
-              hash: commit.sha.substring(0, 7),
-              message: commit.message.split("\n")[0],
-              author: commit.author.name,
-              timestamp: event.created_at,
-            }));
+            const userCommits = event.payload.commits
+              .filter((commit) => targetUsers.includes(commit.author.name))
+              .map((commit) => ({
+                hash: commit.sha.substring(0, 7),
+                message: commit.message.split("\n")[0],
+                author: commit.author.name,
+                timestamp: event.created_at,
+              }));
 
-            repoContribution.commits.push(...commits);
-
-            if (commits.length > 0) {
+            if (userCommits.length > 0) {
+              repoContribution.commits.push(...userCommits);
               console.log(
-                `Added ${commits.length} commits from ${event.repo.name}`
+                `Added ${userCommits.length} commits from ${event.repo.name}`
               );
             }
           }
-
           return acc;
         },
         []
@@ -829,23 +832,58 @@ class EODUpdate {
 
     console.log(`\nContributions for ${dateStr}:\n`);
 
+    const outputLines: string[] = [];
+
     for (const contribution of contributions) {
       console.log(`\n${contribution.repo}:`);
+      outputLines.push(`\n${contribution.repo}:`);
 
-      // Sort commits by timestamp (newest first)
       const sortedCommits = [...contribution.commits].sort(
         (a, b) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
-      // Deduplicate commits using hash
       const uniqueCommits = Array.from(
         new Map(sortedCommits.map((commit) => [commit.hash, commit])).values()
       );
 
       for (const commit of uniqueCommits) {
-        console.log(`- ${commit.hash}: ${commit.message} (${commit.author})`);
+        if (this.config.outputFormat === "detailed") {
+          const dt = new Date(commit.timestamp);
+          const fullDate = dt.toLocaleString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+          const line = `- ${commit.hash}\n  Author: ${commit.author}\n  Date: ${fullDate}\n  Message:\n  ${commit.message}\n`;
+          console.log(line);
+          outputLines.push(line);
+        } else {
+          const line = `- ${commit.hash}: ${commit.message.split("\n")[0]} (${
+            commit.author
+          })`;
+          console.log(line);
+          outputLines.push(line);
+        }
       }
+    }
+
+    // ✅ Write to file if allowed
+    if (!this.config.noFiles) {
+      const dir = path.resolve(this.config.outputDir || "reports");
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const dateStr = this.date.toISOString().split("T")[0];
+
+      const filePath = path.join(dir, `contributions-${dateStr}.txt`);
+      fs.writeFileSync(filePath, outputLines.join("\n"), "utf-8");
+      console.log(`\n✅ Report written to ${filePath}`);
     }
   }
 }
