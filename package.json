@@ -2,21 +2,23 @@
   "name": "eod-update",
   "version": "1.0.0",
   "description": "End of Day GitHub Contributions Checker",
-  "main": "dist/eod_update.js",
+  "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/eod_update.js",
+    "start": "node dist/main.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup-env": "node setup-env.js",
     "build-run": "pnpm run build && pnpm run start"
   },
   "dependencies": {
     "axios": "^1.9.0",
-    "dotenv": "^16.5.0"
+    "dotenv": "^16.5.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",
     "@types/node": "^20.11.0",
+    "@types/yargs": "^17.0.33",
     "typescript": "^5.3.3"
   }
 }
