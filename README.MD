@@ -11,6 +11,7 @@ The updated version fixes several issues with the original script:
 3. **Better Repository Detection**: Falls back to explicitly defined repositories when API access fails
 4. **More Robust User Tracking**: Checks both commit author names and GitHub usernames
 5. **Enhanced Error Handling and Diagnostics**: More helpful error messages and debugging options
+6. **Multi-Branch Support**: Fetches commits from all recently committed branches, not just the main branch
 
 ## 🚀 Setup
 
@@ -37,3 +38,4 @@ Configure the tracker through environment variables in your `.env` file:
 | `NO_FILES` | Disable file output (only show in console) | `false` |
 | `OUTPUT_DIR` | Custom output directory for reports | `reports` |
 | `DEBUG` | Enable for detailed logging | `false` |
+| `MAX_BRANCHES` | Maximum number of branches to check for commits | `10` |

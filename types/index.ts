@@ -39,8 +39,9 @@ export interface AppConfig {
   date: Date;
   debug: boolean;
   checkPreviousDay: boolean;
-  outputFormat: "simple" | "detailed";
+  outputFormat: 'simple' | 'detailed';
   noFiles: boolean;
   outputDir: string;
-  output: "txt" | "json" | "md";
+  output: 'txt' | 'json' | 'md';
+  maxBranches: number;
 }

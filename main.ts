@@ -1,63 +1,66 @@
 #!/usr/bin/env node
 
-import "dotenv/config";
-import { GitHubService } from "./services/GitHubService";
-import { EODProcessor } from "./services/EODProcessor";
-import { Reporter } from "./services/Reporter";
-import type { GitHubEvent, AppConfig } from "./types";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
+import 'dotenv/config';
+import { GitHubService } from './services/GitHubService';
+import { EODProcessor } from './services/EODProcessor';
+import { Reporter } from './services/Reporter';
+import type { GitHubEvent, AppConfig } from './types';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
 function validateConfig(): AppConfig {
   const argv = yargs(hideBin(process.argv))
-    .option("date", { type: "string" })
-    .option("outputFormat", { type: "string", choices: ["simple", "detailed"] })
-    .option("noFiles", { type: "boolean" })
-    .option("output", {
-      type: "string",
-      choices: ["txt", "json", "md"],
-      default: "txt",
+    .option('date', { type: 'string' })
+    .option('outputFormat', { type: 'string', choices: ['simple', 'detailed'] })
+    .option('noFiles', { type: 'boolean' })
+    .option('output', {
+      type: 'string',
+      choices: ['txt', 'json', 'md'],
+      default: 'txt',
     })
     .parseSync();
 
   const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error("GITHUB_TOKEN is required");
+  if (!token) throw new Error('GITHUB_TOKEN is required');
 
-  const rawTargetUsers = process.env.TARGET_USERS || "";
-  const rawTargetRepos = process.env.TARGET_REPOS || "";
+  const rawTargetUsers = process.env.TARGET_USERS || '';
+  const rawTargetRepos = process.env.TARGET_REPOS || '';
 
   const targetUsers = rawTargetUsers
-    .split(",")
+    .split(',')
     .map((u) => u.trim())
     .filter(Boolean);
 
   const rawRepos = rawTargetRepos
-    .split(",")
+    .split(',')
     .map((r) => r.trim())
     .filter(Boolean);
 
   const organization = process.env.GITHUB_ORG || undefined;
-  const debug = process.env.DEBUG === "true";
-  const checkPreviousDay = process.env.CHECK_PREVIOUS_DAY === "true";
+  const debug = process.env.DEBUG === 'true';
+  const checkPreviousDay = process.env.CHECK_PREVIOUS_DAY === 'true';
   const outputFormat = (argv.outputFormat ||
     process.env.OUTPUT_FORMAT ||
-    "simple") as "simple" | "detailed";
-  const noFiles = argv.noFiles ?? process.env.NO_FILES === "true";
-  const outputDir = process.env.OUTPUT_DIR || "reports";
+    'simple') as 'simple' | 'detailed';
+  const noFiles = argv.noFiles ?? process.env.NO_FILES === 'true';
+  const outputDir = process.env.OUTPUT_DIR || 'reports';
+  const maxBranches = process.env.MAX_BRANCHES
+    ? parseInt(process.env.MAX_BRANCHES, 10)
+    : 10;
 
-  const allowedOutputs = ["txt", "json", "md"] as const;
+  const allowedOutputs = ['txt', 'json', 'md'] as const;
   type OutputFormat = (typeof allowedOutputs)[number];
 
-  const outputArg = argv.output ?? "txt";
+  const outputArg = argv.output ?? 'txt';
   const output: OutputFormat = allowedOutputs.includes(outputArg as any)
     ? (outputArg as OutputFormat)
-    : "txt";
+    : 'txt';
 
   let date = new Date();
   if (argv.date) {
     const d = new Date(argv.date);
     if (!isNaN(d.getTime())) date = d;
-    else console.warn("Invalid CLI --date. Using today.");
+    else console.warn('Invalid CLI --date. Using today.');
   } else if (process.env.TARGET_DATE) {
     const d = new Date(process.env.TARGET_DATE);
     if (!isNaN(d.getTime())) date = d;
@@ -75,6 +78,7 @@ function validateConfig(): AppConfig {
     noFiles,
     outputDir,
     output,
+    maxBranches,
   };
 }
 
@@ -83,7 +87,8 @@ async function fetchEvents(
   targetUsers: string[],
   targetRepos: string[],
   org?: string,
-  date?: Date
+  date?: Date,
+  maxBranches: number = 10
 ): Promise<GitHubEvent[]> {
   const events: GitHubEvent[] = [];
   const since = new Date(date ?? new Date());
@@ -97,7 +102,7 @@ async function fetchEvents(
   const repos: Set<string> = new Set();
 
   const isValidFullRepo = (r: string) =>
-    r.includes("/") && r.split("/").length === 2;
+    r.includes('/') && r.split('/').length === 2;
 
   if (org) {
     const orgRepos = await github.getOrgRepos(org);
@@ -115,18 +120,29 @@ async function fetchEvents(
     }
   });
 
-  if (process.env.DEBUG === "true") {
-    console.debug("🔍 Repositories to fetch commits from:");
-    console.debug([...repos].join("\n"));
+  if (process.env.DEBUG === 'true') {
+    console.debug('🔍 Repositories to fetch commits from:');
+    console.debug([...repos].join('\n'));
   }
 
   for (const repo of repos) {
     try {
-      const commits = await github.getCommitsForRepo(repo, sinceISO, untilISO);
+      const commits = await github.getCommitsForRepo(
+        repo,
+        sinceISO,
+        untilISO,
+        maxBranches
+      );
       if (commits.length > 0) {
+        if (process.env.DEBUG === 'true') {
+          console.debug(
+            `🔍 Found ${commits.length} commits across all branches for ${repo}`
+          );
+        }
+
         const event: GitHubEvent = {
           created_at: sinceISO,
-          type: "PushEvent",
+          type: 'PushEvent',
           repo: { name: repo },
           payload: {
             commits: commits.map((c) => ({
@@ -166,16 +182,16 @@ async function main(): Promise<void> {
   const config = validateConfig();
 
   // Auto-resolve short repo names to owner/repo
-  if (config.targetRepos.some((r) => !r.includes("/"))) {
+  if (config.targetRepos.some((r) => !r.includes('/'))) {
     const prefix = config.organization;
     if (!prefix) {
       throw new Error(
-        "You used short repo names, but GITHUB_ORG is not set. Please set it in .env or use full repo names."
+        'You used short repo names, but GITHUB_ORG is not set. Please set it in .env or use full repo names.'
       );
     }
 
     config.targetRepos = config.targetRepos.map((r) =>
-      r.includes("/") ? r : `${prefix}/${r}`
+      r.includes('/') ? r : `${prefix}/${r}`
     );
   }
 
@@ -183,14 +199,15 @@ async function main(): Promise<void> {
     token: config.token,
     debug: config.debug,
   });
-  const dateStr = config.date.toISOString().split("T")[0];
+  const dateStr = config.date.toISOString().split('T')[0];
 
   const events = await fetchEvents(
     github,
     config.targetUsers,
     config.targetRepos,
     config.organization,
-    config.date
+    config.date,
+    config.maxBranches
   );
 
   const processor = new EODProcessor({
@@ -211,7 +228,8 @@ async function main(): Promise<void> {
       config.targetUsers,
       config.targetRepos,
       config.organization,
-      prevDate
+      prevDate,
+      config.maxBranches
     );
     const altProcessor = new EODProcessor({
       targetRepos: config.targetRepos,
@@ -221,7 +239,7 @@ async function main(): Promise<void> {
     });
     const altContribs = altProcessor.process(prevEvents);
     if (altContribs.length > 0) {
-      const altDateStr = prevDate.toISOString().split("T")[0];
+      const altDateStr = prevDate.toISOString().split('T')[0];
       const reporter = new Reporter({
         outputFormat: config.outputFormat,
         outputDir: config.outputDir,
@@ -253,6 +271,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error("❌ Error:", err instanceof Error ? err.message : err);
+  console.error('❌ Error:', err instanceof Error ? err.message : err);
   process.exit(1);
 });
