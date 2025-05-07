@@ -1,0 +1,2 @@
+# Run EOD update at 5:50 PM Monday through Saturday (1-6 are Monday-Saturday, 0 is Sunday)
+50 17 * * 1-6 /Users/pradityamanjhi/Desktop/automation/run-eod-update.sh >> /Users/pradityamanjhi/Desktop/automation/eod-update.log 2>&1
