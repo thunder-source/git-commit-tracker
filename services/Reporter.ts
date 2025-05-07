@@ -130,4 +130,30 @@ export class Reporter {
     );
     return Array.from(new Map(sorted.map((c) => [c.hash, c])).values());
   }
+
+  generateMinimalEODReport(contributions: Contribution[]): string {
+    const lines: string[] = [];
+
+    lines.push(`📝 Today's Contributions Summary\n`);
+
+    for (const repo of contributions) {
+      lines.push(`📁 Repository: ${repo.repo}`);
+
+      const commits = this.sortAndDedup(repo.commits);
+
+      for (const commit of commits) {
+        const firstLine = commit.message.split("\n")[0];
+        lines.push(`• ${firstLine}`);
+      }
+
+      lines.push(""); // extra line between repos
+    }
+
+    return lines.join("\n");
+  }
+
+  writeMinimalEODReportFile(message: string): void {
+    const filePath = path.join(this.outputDir, `eod-summary.txt`);
+    fs.writeFileSync(filePath, message, "utf-8");
+  }
 }

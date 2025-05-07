@@ -120,19 +120,6 @@ async function fetchEvents(
     console.debug([...repos].join("\n"));
   }
 
-  // const repos: Set<string> = new Set();
-
-  // if (org) {
-  //   const orgRepos = await github.getOrgRepos(org);
-  //   orgRepos.forEach((r) => repos.add(r));
-  // }
-
-  // const userRepos = await github.getUserRepos();
-  // userRepos.forEach((r) => repos.add(r));
-
-  // If explicit repos provided
-  // targetRepos.filter(Boolean).forEach((r) => repos.add(r));
-
   for (const repo of repos) {
     try {
       const commits = await github.getCommitsForRepo(repo, sinceISO, untilISO);
@@ -261,6 +248,8 @@ async function main(): Promise<void> {
 
   reporter.print(contributions, dateStr);
   reporter.writeToFile(contributions, dateStr);
+  const summary = reporter.generateMinimalEODReport(contributions);
+  reporter.writeMinimalEODReportFile(summary);
 }
 
 main().catch((err) => {
