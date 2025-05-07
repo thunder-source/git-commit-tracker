@@ -12,6 +12,7 @@ The updated version fixes several issues with the original script:
 4. **More Robust User Tracking**: Checks both commit author names and GitHub usernames
 5. **Enhanced Error Handling and Diagnostics**: More helpful error messages and debugging options
 6. **Multi-Branch Support**: Fetches commits from all recently committed branches, not just the main branch
+7. **WhatsApp Integration**: Automatically sends EOD summaries to WhatsApp after the daily run, with support for multi-part messages for long summaries
 
 ## 🚀 Setup
 
@@ -39,3 +40,7 @@ Configure the tracker through environment variables in your `.env` file:
 | `OUTPUT_DIR` | Custom output directory for reports | `reports` |
 | `DEBUG` | Enable for detailed logging | `false` |
 | `MAX_BRANCHES` | Maximum number of branches to check for commits | `10` |
+| `TWILIO_ACCOUNT_SID` | Twilio Account SID for WhatsApp integration | `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `TWILIO_AUTH_TOKEN` | Twilio Auth Token for WhatsApp integration | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `TWILIO_WHATSAPP_FROM` | Twilio WhatsApp number to send from | `whatsapp:+1234567890` |
+| `WHATSAPP_TO` | Recipient's WhatsApp number | `whatsapp:+1234567890` |
