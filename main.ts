@@ -62,8 +62,20 @@ function validateConfig(): AppConfig {
     if (!isNaN(d.getTime())) date = d;
     else console.warn('Invalid CLI --date. Using today.');
   } else if (process.env.TARGET_DATE) {
-    const d = new Date(process.env.TARGET_DATE);
-    if (!isNaN(d.getTime())) date = d;
+    // Special case: if TARGET_DATE is "TODAY", use today's date
+    if (process.env.TARGET_DATE.toUpperCase() === 'TODAY') {
+      date = new Date();
+      if (process.env.DEBUG === 'true') {
+        console.debug("Using today's date:", date.toISOString().split('T')[0]);
+      }
+    } else {
+      const d = new Date(process.env.TARGET_DATE);
+      if (!isNaN(d.getTime())) date = d;
+      else
+        console.warn(
+          `Invalid TARGET_DATE: ${process.env.TARGET_DATE}. Using today's date.`
+        );
+    }
   }
 
   return {

@@ -32,7 +32,7 @@ Configure the tracker through environment variables in your `.env` file:
 | `TARGET_REPOS` | Comma-separated list of repositories to track | `owner/repo1,owner/repo2` |
 | `TARGET_USERS` | Comma-separated list of GitHub usernames to track | `user1,user2` |
 | `GITHUB_ORG` | GitHub organization name | `myorg` |
-| `TARGET_DATE` | Date to use for filtering (YYYY-MM-DD) | `2023-01-01` |
+| `TARGET_DATE` | Date to use for filtering (YYYY-MM-DD or "TODAY") | `2023-01-01` or `TODAY` |
 | `CHECK_PREVIOUS_DAY` | Enable to check previous day if no contributions found today | `true` |
 | `OUTPUT_FORMAT` | Format to use for console output (simple or detailed) | `simple` |
 | `NO_FILES` | Disable file output (only show in console) | `false` |
